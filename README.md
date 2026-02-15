@@ -1,5 +1,14 @@
 # CrawlAI RAG
 
+<p align="center">
+  <img 
+    src="https://github.com/user-attachments/assets/4a7ead5e-cf4a-427d-b225-5b853966e0da"
+    width="320"
+    style="border-radius: 50%;"
+  />
+</p>
+
+
 **CrawlAI RAG** is an AI-powered website intelligence platform that allows users to **crawl entire websites, index their content, and ask natural-language questions** using **Retrieval-Augmented Generation (RAG)**.
 
 It transforms static websites into **queryable knowledge bases**.
