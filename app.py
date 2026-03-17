@@ -1,16 +1,22 @@
 import streamlit as st
-import requests
 import time
-import threading
+from dotenv import load_dotenv
 
-BACKEND_URL = "http://127.0.0.1:8000"
+# Import fungsi backend internal Anda
+from scraper.crawler import crawl_website
+from rag.chunker import chunk_text
+from rag.vectorstore import create_vectorstore
+from rag.qa import get_qa_chain
+
+# 1. Load environment
+load_dotenv()
 
 st.set_page_config(
     page_title="Crawl AI RAG",
     layout="centered"
 )
 
-# ---------- Button font styling ----------
+# Custom Styling
 st.markdown(
     """
     <style>
@@ -26,11 +32,17 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Initialize Session State
+if "last_website" not in st.session_state:
+    st.session_state.last_website = None
+if "answer" not in st.session_state:
+    st.session_state.answer = None
+
 st.title("CrawlAI RAG")
-st.caption("Crawl websites, index content, and ask questions")
+st.caption("Crawl websites, index content, and ask questions directly")
 
 # =====================================================
-# 1. INDEX WEBSITE
+# 1. INDEX WEBSITE (Logic Terintegrasi)
 # =====================================================
 st.subheader("1. Index a Website")
 
@@ -46,80 +58,59 @@ if submit_ingest:
         st.warning("Please enter a website URL")
     else:
         progress = st.progress(0.0)
-        percent = st.empty()
-        status = st.empty()
-
-        state = {"done": False, "response": None, "error": None}
-
-        def update(p, msg):
-            progress.progress(min(p / 100.0, 1.0))
-            percent.markdown(f"**Progress: {p:.2f}%**")
-            status.text(msg)
-
-        def run_backend():
-            try:
-                state["response"] = requests.post(
-                    f"{BACKEND_URL}/ingest",
-                    params={"url": website_url},
-                    timeout=300
-                )
-            except Exception as e:
-                state["error"] = str(e)
-            state["done"] = True
-
-        threading.Thread(target=run_backend, daemon=True).start()
-
-        update(5, "Launching headless browser")
-        time.sleep(0.4)
-        update(15, "Rendering website with JavaScript")
-        time.sleep(0.4)
-        update(30, "Crawling internal pages")
-        time.sleep(0.4)
-        update(45, "Extracting visible content")
-        time.sleep(0.4)
-
-        current = 60.0
-        update(current, "Chunking and embedding content")
-
-        while not state["done"]:
-            current += 0.3
-            if current > 85:
-                current = 85
-            update(current, "Indexing website content")
-            time.sleep(0.25)
-
-        if state["error"]:
-            update(100, "Indexing failed")
-            st.error(state["error"])
-        elif state["response"] and state["response"].status_code == 200:
-            update(100, "Indexing complete")
-            st.success("Website indexed successfully")
-        else:
-            update(100, "Indexing failed")
-            st.error("Indexing failed")
+        status_text = st.empty()
+        
+        try:
+            # Simulasi progress bar seperti UI lama Anda
+            status_text.text("Launching headless browser...")
+            progress.progress(15)
+            time.sleep(0.5)
+            
+            # --- PROSES ASLI ---
+            status_text.text("Crawling website pages...")
+            pages = crawl_website(website_url)
+            progress.progress(45)
+            
+            status_text.text("Chunking content...")
+            chunks = chunk_text(pages)
+            progress.progress(70)
+            
+            status_text.text("Creating vectorstore (Embedding)...")
+            create_vectorstore(chunks, website_url)
+            
+            # Simpan status ke session
+            st.session_state.last_website = website_url
+            
+            progress.progress(100)
+            status_text.text("Indexing complete!")
+            st.success(f"Website indexed successfully: {len(pages)} pages.")
+            
+        except Exception as e:
+            st.error(f"Indexing failed: {str(e)}")
 
 st.divider()
 
 # =====================================================
-# STATE FOR ANSWER
+# FUNGSI ASK (Direct Call)
 # =====================================================
-if "answer" not in st.session_state:
-    st.session_state.answer = None
+def ask_internal(question: str):
+    if not st.session_state.last_website:
+        st.error("Please index a website first!")
+        return
 
-def ask_backend(question: str):
-    with st.spinner("Generating answer"):
+    with st.spinner("Generating answer..."):
         try:
-            res = requests.post(
-                f"{BACKEND_URL}/ask",
-                params={"question": question},
-                timeout=120
-            )
-            if res.status_code == 200:
-                st.session_state.answer = res.json().get("answer", "")
+            # Panggil fungsi QA Anda langsung
+            qa_chain = get_qa_chain(st.session_state.last_website)
+            result = qa_chain.invoke(question)
+            
+            # Parsing hasil
+            if isinstance(result, dict) and "result" in result:
+                st.session_state.answer = result["result"]
             else:
-                st.session_state.answer = "Failed to get answer from backend"
+                st.session_state.answer = str(result)
         except Exception as e:
-            st.session_state.answer = str(e)
+            st.session_state.answer = f"Error: {str(e)}"
 
 # =====================================================
 # 2. QUICK QUESTIONS
@@ -132,12 +123,10 @@ common_questions = [
 ]
 
 cols = st.columns(2)
-
 for idx, q in enumerate(common_questions):
     with cols[idx % 2]:
-        with st.container(border=True):
-            if st.button(q, use_container_width=True, key=f"q_{idx}"):
-                ask_backend(q)
+        if st.button(q, use_container_width=True, key=f"q_{idx}"):
+            ask_internal(q)
 
 st.divider()
 
@@ -147,23 +136,18 @@ st.divider()
 st.subheader("3. Ask Your Own Question")
 
 with st.form("ask_form"):
-    user_question = st.text_input(
-        "Ask something about the website",
-        placeholder="Type your question here"
-    )
+    user_question = st.text_input("Ask something", placeholder="Type here...")
     submit_ask = st.form_submit_button("Ask")
 
 if submit_ask:
-    if not user_question:
-        st.warning("Please enter a question")
+    if user_question:
+        ask_internal(user_question)
     else:
-        ask_backend(user_question)
-
-st.divider()
+        st.warning("Please enter a question")
 
 # =====================================================
-# 4. ANSWER (ALWAYS AT BOTTOM)
+# 4. ANSWER DISPLAY
 # =====================================================
 if st.session_state.answer:
     st.markdown("### Answer")
-    st.write(st.session_state.answer)
+    st.info(st.session_state.answer)
