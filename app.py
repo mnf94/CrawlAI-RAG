@@ -1,16 +1,28 @@
+import os
 import streamlit as st
 import time
-import os
 from dotenv import load_dotenv
 
-# Import internal modules dari project Anda
+# 1. Load environment variables (Terutama GROQ_API_KEY)
+load_dotenv()
+
+# =====================================================
+# SETUP PLAYWRIGHT UNTUK CLOUD
+# =====================================================
+@st.cache_resource
+def install_playwright():
+    """Menginstal browser Playwright otomatis di server saat aplikasi pertama jalan."""
+    os.system("playwright install chromium")
+    os.system("playwright install-deps chromium")
+
+# Jalankan instalasi Playwright sebelum memanggil modul internal
+install_playwright()
+
+# --- IMPORT INTERNAL MODULES ---
 from scraper.crawler import crawl_website
 from rag.chunker import chunk_text
 from rag.vectorstore import create_vectorstore
 from rag.qa import get_qa_chain
-
-# 1. Load environment variables (Terutama GROQ_API_KEY)
-load_dotenv()
 
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(
@@ -113,9 +125,7 @@ def perform_ask(question: str):
             # Panggil Chain RAG dari qa.py
             rag_chain = get_qa_chain(st.session_state.last_url)
             
-            # Karena qa.py sekarang memakai LCEL murni dan StrOutputParser,
-            # kita bisa langsung memberikan string pertanyaan dan 
-            # akan langsung menerima string jawaban.
+            # Memakai LCEL murni dan StrOutputParser
             response = rag_chain.invoke(question)
             
             st.session_state.answer = response
