@@ -1,21 +1,12 @@
-# --- Framework Utama ---
 streamlit
 python-dotenv
-
-# --- AI & RAG Stack ---
-langchain>=0.1.0
+langchain
 langchain-community
 langchain-core
 langchain-groq
-langchain-text-splitters
 langchain-chroma
-
-chromadb
+langchain-huggingface
 sentence-transformers
-
-# --- Scraping & Crawling ---
+chromadb
 beautifulsoup4
 playwright
-
-# --- Utilitas ---
-requests
