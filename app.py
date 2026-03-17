@@ -12,8 +12,8 @@ load_dotenv()
 @st.cache_resource
 def install_playwright():
     """Menginstal browser Playwright otomatis di server saat aplikasi pertama jalan."""
+    # PERHATIAN: install-deps dihapus karena akan diurus oleh file packages.txt
     os.system("playwright install chromium")
-    os.system("playwright install-deps chromium")
 
 # Jalankan instalasi Playwright sebelum memanggil modul internal
 install_playwright()
