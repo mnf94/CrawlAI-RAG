@@ -1,15 +1,10 @@
 # rag/qa.py
-# Di dalam file rag/qa.py
-from langchain.chains import RetrievalQA
-# Pastikan Anda juga mengimpor LLM yang sesuai, contoh:
-# from langchain_groq import ChatGroq 
+# Contoh cara baru di rag/qa.py jika RetrievalQA tetap error
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
 
-from urllib.parse import urlparse
-from langchain_groq import ChatGroq
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# ... kode lainnya ...
 
 
 def get_qa_chain(website_url: str, base_dir="vector_db"):
