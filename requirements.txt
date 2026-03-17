@@ -1,15 +1,17 @@
-streamlit
-time
-playwright
-fastapi
-uvicorn
-langchain
-langchain-community
-chromadb
-beautifulsoup4
-requests
-sentence-transformers
+# --- Framework Utama ---
 streamlit
 python-dotenv
-playwright
+
+# --- AI & RAG Stack ---
+langchain
+langchain-community
 langchain-groq
+chromadb
+sentence-transformers
+
+# --- Scraping & Crawling ---
+beautifulsoup4
+playwright
+
+# --- Utilitas ---
+requests
