@@ -1,4 +1,8 @@
 # rag/qa.py
+# Di dalam file rag/qa.py
+from langchain.chains import RetrievalQA
+# Pastikan Anda juga mengimpor LLM yang sesuai, contoh:
+# from langchain_groq import ChatGroq 
 
 from urllib.parse import urlparse
 from langchain_groq import ChatGroq
