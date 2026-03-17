@@ -9,7 +9,7 @@ from rag.chunker import chunk_text
 from rag.vectorstore import create_vectorstore
 from rag.qa import get_qa_chain
 
-# 1. Load environment variables
+# 1. Load environment variables (Terutama GROQ_API_KEY)
 load_dotenv()
 
 # --- KONFIGURASI HALAMAN ---
@@ -101,7 +101,7 @@ if submit_ingest:
 st.divider()
 
 # =====================================================
-# FUNGSI UNTUK BERTANYA (Direct Call)
+# FUNGSI UNTUK BERTANYA (Direct Call & LCEL Update)
 # =====================================================
 def perform_ask(question: str):
     if not st.session_state.last_url:
@@ -110,14 +110,15 @@ def perform_ask(question: str):
 
     with st.spinner("🤖 Thinking..."):
         try:
-            # Panggil Chain RAG
+            # Panggil Chain RAG dari qa.py
             rag_chain = get_qa_chain(st.session_state.last_url)
             
-            # Format pemanggilan LCEL (LangChain modern)
-            response = rag_chain.invoke({"input": question})
+            # Karena qa.py sekarang memakai LCEL murni dan StrOutputParser,
+            # kita bisa langsung memberikan string pertanyaan dan 
+            # akan langsung menerima string jawaban.
+            response = rag_chain.invoke(question)
             
-            # Ambil jawaban (Key "answer" digunakan oleh create_retrieval_chain)
-            st.session_state.answer = response.get("answer", "No answer found.")
+            st.session_state.answer = response
         except Exception as e:
             st.session_state.answer = f"Error: {str(e)}"
 
