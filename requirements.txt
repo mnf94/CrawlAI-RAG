@@ -1,4 +1,6 @@
 streamlit
+time
+playwright
 fastapi
 uvicorn
 langchain
