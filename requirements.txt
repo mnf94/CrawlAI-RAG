@@ -3,11 +3,12 @@ streamlit
 python-dotenv
 
 # --- AI & RAG Stack ---
-langchain
+langchain>=0.1.0
 langchain-community
 langchain-core
 langchain-groq
 langchain-text-splitters
+langchain-chroma
 
 chromadb
 sentence-transformers
