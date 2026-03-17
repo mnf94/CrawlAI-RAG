@@ -1,58 +1,41 @@
-# rag/qa.py
-# Contoh cara baru di rag/qa.py jika RetrievalQA tetap error
+import os
+from langchain_groq import ChatGroq
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
+from rag.vectorstore import get_vectorstore # Pastikan fungsi ini ada
 
-# ... kode lainnya ...
-
-
-def get_qa_chain(website_url: str, base_dir="vector_db"):
-    domain = urlparse(website_url).netloc.replace(".", "_")
-    persist_dir = f"{base_dir}/{domain}"
-
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
-
-    vectordb = Chroma(
-        persist_directory=persist_dir,
-        embedding_function=embeddings
-    )
-
+def get_qa_chain(url: str):
+    # 1. Inisialisasi LLM (Groq LLaMA 3.3)
     llm = ChatGroq(
+        temperature=0, 
         model_name="llama-3.3-70b-versatile",
-        temperature=0.2
+        groq_api_key=os.getenv("GROQ_API_KEY")
     )
 
-    prompt = PromptTemplate(
-        input_variables=["context", "question"],
-        template="""
-Answer using ONLY the provided website content.
+    # 2. Ambil Retriever dari Vectorstore Anda
+    vectorstore = get_vectorstore(url)
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
-Rules:
-- Give a brief but complete answer (4–6 sentences).
-- Be clear and informative.
-- Do NOT repeat the question.
-- Do NOT add information not present in the context.
-- If the answer is not found in the context, say so clearly.
-- If the user asks for a link (e.g., GitHub, website), look for it in the "Links Found" section of the content.
-- If the user asks about projects, prioritize sections marked "PERSONAL PROJECT", "Featured Projects", or distinct project cards over general mentions in testimonials.
-
-Context:
-{context}
-
-Question:
-{question}
-
-Answer:
-"""
+    # 3. Definisikan Prompt
+    system_prompt = (
+        "You are an assistant for question-answering tasks. "
+        "Use the following pieces of retrieved context to answer "
+        "the question. If you don't know the answer, say that you "
+        "don't know. Use three sentences maximum and keep the "
+        "answer concise.\n\n"
+        "{context}"
+    )
+    
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("human", "{input}"),
+        ]
     )
 
-    return RetrievalQA.from_chain_type(
-        llm=llm,
-        retriever=vectordb.as_retriever(search_kwargs={"k": 25}),
-        chain_type="stuff",
-        chain_type_kwargs={"prompt": prompt},
-        return_source_documents=True
-    )
+    # 4. Buat Chain menggunakan cara modern (LCEL)
+    question_answer_chain = create_stuff_documents_chain(llm, prompt)
+    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+
+    return rag_chain
